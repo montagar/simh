@@ -1,4 +1,4 @@
-/* 3b2_cpu.h: AT&T 3B2 Model 400 IO dispatch (Header)
+/* 3b2_io.h: AT&T 3B2 Model 400 IO dispatch (Header)
 
    Copyright (c) 2017, Seth J. Morabito
 
@@ -111,14 +111,20 @@
 #ifndef _3B2_IO_H_
 #define _3B2_IO_H_
 
-#include "3b2_sysdev.h"
-#include "3b2_iu.h"
-#include "3b2_if.h"
-#include "3b2_id.h"
-#include "3b2_dmac.h"
-#include "3b2_mmu.h"
-
+#include "sim_defs.h"
 #include "sim_tmxr.h"
+
+#define CRC_POLYNOMIAL  0xEDB88320
+
+#define CIO_SLOTS       12
+
+/* IO area */
+#define IO_BOTTOM       0x40000
+#define IO_TOP          0x50000
+
+/* CIO area */
+#define CIO_BOTTOM      0x200000
+#define CIO_TOP         0x2000000
 
 #define IOF_ID          0
 #define IOF_VEC         1
@@ -133,6 +139,11 @@
 #define CIO_FCF         3
 #define CIO_DOS         4
 #define CIO_DSD         5
+
+/* Response */
+#define CIO_SUCCESS     0
+#define CIO_FAILURE     2
+#define CIO_SYSGEN_OK   3
 
 /* Map a physical address to a card ID */
 #define CID(pa)         (((((pa) >> 0x14) & 0x1f) / 2) - 1)
@@ -154,21 +165,22 @@
 
 
 typedef struct {
-    uint16 id;                         /* Card ID                       */
-    void   (*exp_handler)(uint8 cid);  /* Handler for express jobs      */
-    void   (*full_handler)(uint8 cid); /* Handler for full jobs         */
-    void   (*sysgen)(uint8 cid);       /* Sysgen routine (optional)     */
-    uint32 rqp;                        /* Request Queue Pointer         */
-    uint32 cqp;                        /* Completion Queue Pointer      */
-    uint8  rqs;                        /* Request queue size            */
-    uint8  cqs;                        /* Completion queue size         */
-    uint8  ivec;                       /* Interrupt Vector              */
-    uint8  no_rque;                    /* Number of request queues      */
-    uint8  ipl;                        /* IPL that this card uses       */
-    t_bool intr;                       /* Card needs to interrupt       */
-    uint8  sysgen_s;                   /* Sysgen state                  */
-    uint8  seqbit;                     /* Squence Bit                   */
-    uint8  op;                         /* Last received opcode          */
+    uint16 id;                           /* Card ID                          */
+    void   (*exp_handler)(uint8 cid);    /* Handler for express jobs         */
+    void   (*full_handler)(uint8 cid);   /* Handler for full jobs            */
+    void   (*sysgen)(uint8 cid);         /* Sysgen routine (optional)        */
+    void   (*reset_handler)(uint8 cid);  /* RESET request handler (optional) */
+    uint32 rqp;                          /* Request Queue Pointer            */
+    uint32 cqp;                          /* Completion Queue Pointer         */
+    uint8  rqs;                          /* Request queue size               */
+    uint8  cqs;                          /* Completion queue size            */
+    uint8  ivec;                         /* Interrupt Vector                 */
+    uint8  no_rque;                      /* Number of request queues         */
+    uint8  ipl;                          /* IPL that this card uses          */
+    t_bool intr;                         /* Card needs to interrupt          */
+    uint8  sysgen_s;                     /* Sysgen state                     */
+    uint8  seqbit;                       /* Squence Bit                      */
+    uint8  op;                           /* Last received opcode             */
 } CIO_STATE;
 
 typedef struct {
@@ -213,26 +225,27 @@ typedef struct {
     uint32 retcode;
 } pump;
 
-extern uint16 cio_ints;
-extern CIO_STATE cio[CIO_SLOTS];
-
 t_stat cio_reset(DEVICE *dptr);
 t_stat cio_svc(UNIT *uptr);
 
 void cio_clear(uint8 cid);
 uint32 cio_crc32_shift(uint32 crc, uint8 data);
-void cio_cexpress(uint8 cid, uint16 esize, cio_entry *cqe, uint8 *app_data);
-void cio_cqueue(uint8 cid, uint8 cmd_stat, uint16 esize, cio_entry *cqe, uint8 *app_data);
-void cio_rexpress(uint8 cid, uint16 esize, cio_entry *rqe, uint8 *app_data);
-t_stat cio_rqueue(uint8 cid, uint8 qnum, uint16 esize, cio_entry *rqe, uint8 *app_data);
-t_bool cio_cqueue_avail(uint8 cid, uint16 esize);
-uint16 cio_r_lp(uint8 cid, uint8 qnum, uint16 esize);
-uint16 cio_r_ulp(uint8 cid, uint8 qnum, uint16 esize);
-uint16 cio_c_lp(uint8 cid, uint16 esize);
-uint16 cio_c_ulp(uint8 cid, uint16 esize);
+void cio_cexpress(uint8 cid, uint32 esize, cio_entry *cqe, uint8 *app_data);
+void cio_cqueue(uint8 cid, uint8 cmd_stat, uint32 esize, cio_entry *cqe, uint8 *app_data);
+t_bool cio_cqueue_avail(uint8 cid, uint32 esize);
+void cio_rexpress(uint8 cid, uint32 esize, cio_entry *rqe, uint8 *app_data);
+t_stat cio_rqueue(uint8 cid, uint32 qnum, uint32 esize, cio_entry *rqe, uint8 *app_data);
+t_bool cio_rqueue_avail(uint8 cid, uint32 qnum, uint32 esize);
+uint16 cio_r_lp(uint8 cid, uint32 qnum, uint32 esize);
+uint16 cio_r_ulp(uint8 cid, uint32 qnum, uint32 esize);
+uint16 cio_c_lp(uint8 cid, uint32 esize);
+uint16 cio_c_ulp(uint8 cid, uint32 esize);
 void cio_sysgen(uint8 cid);
 
+uint32 io_read(uint32 pa, size_t size);
+void io_write(uint32 pa, uint32 val, size_t size);
+
 void dump_entry(uint32 dbits, DEVICE *dev, CONST char *type,
-                uint16 esize, cio_entry *entry, uint8 *app_data);
+                uint32 esize, cio_entry *entry, uint8 *app_data);
 
 #endif

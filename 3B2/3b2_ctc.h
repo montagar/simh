@@ -51,7 +51,7 @@
 #ifndef _3B2_CTC_H_
 #define _3B2_CTC_H_
 
-#include "3b2_defs.h"
+#include "sim_defs.h"
 #include "3b2_io.h"
 
 #define UNIT_V_WLK    (DKUF_V_UF + 0)     /* Write-locked tape */
@@ -83,6 +83,10 @@
 #define VTOC_SECSZ      512
 #define VTOC_PART       16          /* Number of "partitions" on tape */
 #define VTOC_VALID      0x600DDEEE  /* Magic number for valid VTOC */
+
+#define CTC_NUM_SD      2
+#define CTC_SD_FT25     4
+#define CTC_SD_FD5      1
 
 /* Physical Device Info (pdinfo) values */
 #define PD_VALID        0xCA5E600D  /* Magic number for valid PDINFO */
@@ -139,9 +143,8 @@ struct pdinfo {
 
 typedef struct {
     uint32 time;        /* Time used during a tape session (in 25ms chunks) */
+    uint32 bytnum;      /* Byte number, for streaming mode */
 } CTC_STATE;
-
-extern DEVICE ctc_dev;
 
 t_stat ctc_reset(DEVICE *dptr);
 t_stat ctc_svc(UNIT *uptr);

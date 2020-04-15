@@ -55,12 +55,27 @@
 int ws_lp_x = -1;
 int ws_lp_y = -1;
 
+/* A device simulator can optionally set the vid_display_kb_event_process
+ * routine pointer to the address of a routine.
+ * Simulator code which uses the display library which processes window 
+ * keyboard data with code in display/sim_ws.c can use this routine to
+ * explicitly get access to keyboard events that arrive in the display 
+ * window.  This routine should return 0 if it has handled the event that
+ * was passed, and non zero if it didn't handle it.  If the routine address
+ * is not set or a non zero return value occurs, then the keyboard event
+ * will be processed by the display library which may then be handled as
+ * console character input if the device console code is implemented to 
+ * accept this.
+ */
+int (*vid_display_kb_event_process)(SIM_KEY_EVENT *kev) = NULL;
+
 static int xpixels, ypixels;
 static int pix_size = PIX_SIZE;
 static const char *window_name;
 static uint32 *colors = NULL;
 static uint32 ncolors = 0, size_colors = 0;
 static uint32 *surface = NULL;
+static uint32 ws_palette[2];                            /* Monochrome palette */
 typedef struct cursor {
     Uint8 *data;
     Uint8 *mask;
@@ -220,16 +235,19 @@ ws_poll(int *valp, int maxus)
         vid_set_cursor_position (mev.x_pos, mev.y_pos);
         }
     if (SCPE_OK == vid_poll_kb (&kev)) {
-        switch (kev.state) {
-            case SIM_KEYPRESS_DOWN:
-            case SIM_KEYPRESS_REPEAT:
-                display_keydown(map_key(kev.key));
-                break;
-            case SIM_KEYPRESS_UP:
-                display_keyup(map_key(kev.key));
-                break;
+        if ((vid_display_kb_event_process == NULL) || 
+            (vid_display_kb_event_process (&kev) != 0)) {
+            switch (kev.state) {
+                case SIM_KEYPRESS_DOWN:
+                case SIM_KEYPRESS_REPEAT:
+                    display_keydown(map_key(kev.key));
+                    break;
+                case SIM_KEYPRESS_UP:
+                    display_keyup(map_key(kev.key));
+                    break;
+                }
+            key_to_ascii (&kev);
             }
-        key_to_ascii (&kev);
         }
     return 1;
 }
@@ -377,11 +395,13 @@ ws_init(const char *name, int xp, int yp, int colors, void *dptr)
     ypixels = yp;
     window_name = name;
     surface = (uint32 *)realloc (surface, xpixels*ypixels*sizeof(*surface));
-    for (i=0; i<xpixels*ypixels; i++)
-        surface[i] = vid_mono_palette[0];
     ret = (0 == vid_open ((DEVICE *)dptr, name, xp*pix_size, yp*pix_size, 0));
     if (ret)
         vid_set_cursor (1, arrow_cursor->width, arrow_cursor->height, arrow_cursor->data, arrow_cursor->mask, arrow_cursor->hot_x, arrow_cursor->hot_y);
+    ws_palette[0] = vid_map_rgb (0x00, 0x00, 0x00);     /* black */
+    ws_palette[1] = vid_map_rgb (0xFF, 0xFF, 0xFF);     /* white */
+    for (i=0; i<xpixels*ypixels; i++)
+        surface[i] = ws_palette[0];
     return ret;
 }
 
@@ -398,7 +418,7 @@ ws_color_rgb(int r, int g, int b)
 {
     uint32 color, i;
     
-    color = sim_end ? (0xFF000000 | ((r & 0xFF00) << 8) | (g & 0xFF00) | ((b & 0xFF00) >> 8)) : (0x000000FF | (r  & 0xFF00) | ((g & 0xFF00) << 8) | ((b & 0xFF00) << 16));
+    color = vid_map_rgb ((r >> 8) & 0xFF, (g >> 8) & 0xFF, (b >> 8) & 0xFF);
     for (i=0; i<ncolors; i++) {
         if (colors[i] == color)
             return &colors[i];
@@ -407,8 +427,8 @@ ws_color_rgb(int r, int g, int b)
         colors = (uint32 *)realloc (colors, (ncolors + 1000) * sizeof (*colors));
         size_colors += 1000;
         if (size_colors == 1000) {
-            colors[0] = vid_mono_palette[0];
-            colors[1] = vid_mono_palette[1];
+            colors[0] = ws_palette[0];
+            colors[1] = ws_palette[1];
             ncolors = 2;
             }
         }
@@ -420,13 +440,13 @@ ws_color_rgb(int r, int g, int b)
 void *
 ws_color_black(void)
 {
-    return (void *)&vid_mono_palette[0];
+    return (void *)&ws_palette[0];
 }
 
 void *
 ws_color_white(void)
 {
-    return (void *)&vid_mono_palette[1];
+    return (void *)&ws_palette[1];
 }
 
 void

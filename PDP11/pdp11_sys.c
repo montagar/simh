@@ -117,6 +117,11 @@ extern DEVICE dpv_dev;
 extern DEVICE kmc_dev;
 extern DEVICE uca_dev, ucb_dev;
 extern DEVICE rom_dev;
+extern DEVICE ch_dev;
+#ifdef USE_DISPLAY
+extern DEVICE ng_dev;
+extern DEVICE daz_dev;
+#endif
 extern REG cpu_reg[];
 extern int32 saved_PC;
 
@@ -195,6 +200,11 @@ DEVICE *sim_devices[] = {
     &kmc_dev,
     &ke_dev,
     &rom_dev,
+    &ch_dev,
+#ifdef USE_DISPLAY
+    &ng_dev,
+    &daz_dev,
+#endif
 #else
     &clk_dev,
     &tti_dev,

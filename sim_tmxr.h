@@ -66,17 +66,17 @@ typedef struct SERPORT *SERHANDLE;
 #define TMXR_MODEM_RING_TIME 3                          /* seconds to wait for DTR for incoming connections */
 #define TMXR_DEFAULT_CONNECT_POLL_INTERVAL 1            /* seconds between connection polls */
 
-#define TMXR_DBG_XMT    0x0010000                        /* Debug Transmit Data */
-#define TMXR_DBG_RCV    0x0020000                        /* Debug Received Data */
-#define TMXR_DBG_RET    0x0040000                        /* Debug Returned Received Data */
-#define TMXR_DBG_MDM    0x0080000                        /* Debug Modem Signals */
-#define TMXR_DBG_CON    0x0100000                        /* Debug Connection Activities */
-#define TMXR_DBG_ASY    0x0200000                        /* Debug Asynchronous Activities */
-#define TMXR_DBG_TRC    0x0400000                        /* Debug trace routine calls */
-#define TMXR_DBG_PXMT   0x0800000                        /* Debug Transmit Packet Data */
-#define TMXR_DBG_PRCV   0x1000000                        /* Debug Received Packet Data */
-#define TMXR_DBG_EXP    0x2000000                        /* Debug Expect Activities */
-#define TMXR_DBG_SEND   0x4000000                        /* Debug Send Activities */
+#define TMXR_DBG_XMT    0x00200000                       /* Debug Transmit Data */
+#define TMXR_DBG_RCV    0x00400000                       /* Debug Received Data */
+#define TMXR_DBG_RET    0x00800000                       /* Debug Returned Received Data */
+#define TMXR_DBG_MDM    0x01000000                       /* Debug Modem Signals */
+#define TMXR_DBG_CON    0x02000000                       /* Debug Connection Activities */
+#define TMXR_DBG_ASY    0x04000000                       /* Debug Asynchronous Activities */
+#define TMXR_DBG_TRC    0x08000000                       /* Debug trace routine calls */
+#define TMXR_DBG_PXMT   0x10000000                       /* Debug Transmit Packet Data */
+#define TMXR_DBG_PRCV   0x20000000                       /* Debug Received Packet Data */
+#define TMXR_DBG_EXP    0x40000000                       /* Debug Expect Activities */
+#define TMXR_DBG_SEND   0x80000000                       /* Debug Send Activities */
 
 /* Modem Control Bits */
 
@@ -307,6 +307,7 @@ const char *tmxr_send_line_name (const SEND *snd);
 const char *tmxr_expect_line_name (const EXPECT *exp);
 t_stat tmxr_startup (void);
 t_stat tmxr_shutdown (void);
+t_stat tmxr_sock_test (DEVICE *dptr);
 t_stat tmxr_start_poll (void);
 t_stat tmxr_stop_poll (void);
 void _tmxr_debug (uint32 dbits, TMLN *lp, const char *msg, char *buf, int bufsize);

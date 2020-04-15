@@ -159,7 +159,7 @@ MTAB xu_mod[] = {
     &set_addr, &show_addr, NULL },
   { MTAB_XTD|MTAB_VDV, 0, NULL, "AUTOCONFIGURE",
     &set_addr_flt, NULL, NULL },
-  { MTAB_XTD|MTAB_VDV|MTAB_VALR, 0, "VECTOR", NULL,
+  { MTAB_XTD|MTAB_VDV|MTAB_VALR, 0, "VECTOR", "VECTOR",
     &set_vec, &show_vec, NULL },
 #else
   { MTAB_XTD|MTAB_VDV, 0, "ADDRESS", NULL,
@@ -192,8 +192,8 @@ REG xua_reg[] = {
   { GRDATA ( TYPE,    xua.type,     XU_RDX, 32, 0), REG_FIT },
   { FLDATA ( INT,     xua.irq, 0) },
   { GRDATA ( IDTMR,   xua.idtmr,    XU_RDX, 32, 0), REG_HRO},
-  { BRDATA ( SETUP,   &xua.setup,   XU_RDX, 8, sizeof(xua.setup)), REG_HRO},
-  { BRDATA ( STATS,   &xua.stats,   XU_RDX, 8, sizeof(xua.stats)), REG_HRO},
+  { SAVEDATA ( SETUP,   xua.setup) },
+  { SAVEDATA ( STATS,   xua.stats) },
   { GRDATA ( CSR0,    xua.pcsr0,    XU_RDX, 16, 0), REG_FIT },
   { GRDATA ( CSR1,    xua.pcsr1,    XU_RDX, 16, 0), REG_FIT },
   { GRDATA ( CSR2,    xua.pcsr2,    XU_RDX, 16, 0), REG_FIT },
@@ -269,8 +269,8 @@ REG xub_reg[] = {
   { GRDATA ( TYPE,    xub.type,     XU_RDX, 32, 0), REG_FIT },
   { FLDATA ( INT,     xub.irq, 0) },
   { GRDATA ( IDTMR,   xub.idtmr,    XU_RDX, 32, 0), REG_HRO},
-  { BRDATA ( SETUP,   &xub.setup,   XU_RDX, 8, sizeof(xua.setup)), REG_HRO},
-  { BRDATA ( STATS,   &xub.stats,   XU_RDX, 8, sizeof(xua.stats)), REG_HRO},
+  { SAVEDATA ( SETUP, xub.setup) },
+  { SAVEDATA ( STATS, xub.stats) },
   { GRDATA ( CSR0,    xub.pcsr0,    XU_RDX, 16, 0), REG_FIT },
   { GRDATA ( CSR1,    xub.pcsr1,    XU_RDX, 16, 0), REG_FIT },
   { GRDATA ( CSR2,    xub.pcsr2,    XU_RDX, 16, 0), REG_FIT },
@@ -1776,10 +1776,6 @@ t_stat xu_attach(UNIT* uptr, CONST char* cptr)
   }
   eth_set_throttle (xu->var->etherface, xu->var->throttle_time, xu->var->throttle_burst, xu->var->throttle_delay);
   if (SCPE_OK != eth_check_address_conflict (xu->var->etherface, &xu->var->mac)) {
-    char buf[32];
-
-    eth_mac_fmt(&xu->var->mac, buf);     /* format ethernet mac address */
-    sim_printf("%s: MAC Address Conflict on LAN for address %s\n", xu->dev->name, buf);
     eth_close(xu->var->etherface);
     free(tptr);
     free(xu->var->etherface);
